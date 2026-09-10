@@ -2,7 +2,7 @@
 
 Measurements behind a change proposed to
 [elixir-lsp/elixir-ls](https://github.com/elixir-lsp/elixir-ls), "Bind the MCP
-server to loopback": the MCP TCP server calls `:gen_tcp.listen/2` without an
+server to loopback" ([elixir-lsp/elixir-ls#1275](https://github.com/elixir-lsp/elixir-ls/pull/1275)): the MCP TCP server calls `:gen_tcp.listen/2` without an
 `{:ip, _}` option, so it binds `0.0.0.0` and, while enabled, is reachable from
 the network without authentication. The change adds `ip: {127, 0, 0, 1}`.
 
