@@ -1,0 +1,21 @@
+environment
+  OTP 27 erts-15.2.7.13
+  non-loopback IPv4: 172.17.0.2
+  nft tables: 0
+
+## 1. master: listen options as in tcp_server.ex:135 (no {ip,_})
+  -> bind 0.0.0.0:41555
+  -> connect from non-loopback 172.17.0.2 -> ok
+  -> connect ::1 (IPv6 loopback)  -> {error,econnrefused}   (0.0.0.0 is not a dual-stack bind)
+
+## 2. fix: same options plus {ip, {127,0,0,1}}
+  -> bind 127.0.0.1:33841
+  -> connect from non-loopback 172.17.0.2 -> {error,econnrefused}
+  -> connect 127.0.0.1             -> ok
+
+## 3. bridge: gen_tcp:connect by the name "localhost", no family option
+  -> inet_db:res_option(inet6) = false
+  -> inet:getaddr("localhost", inet) = {ok,{127,0,0,1}}
+  -> connect("localhost") to the 127.0.0.1 listener -> ok   (resolved in the inet family)
+
+done
