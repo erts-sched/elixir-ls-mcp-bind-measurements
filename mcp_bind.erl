@@ -1,19 +1,18 @@
 %% Measurements behind elixir-lsp/elixir-ls PR "Bind the MCP server to loopback".
 %% Reproduces the listen options of apps/language_server/lib/language_server/mcp/tcp_server.ex
 %% before and after the change, and checks reachability from inside the BEAM.
-%% Meant to run in a network namespace of its own (see run.sh), so no host firewall is involved.
+%% Meant to run in a network namespace of its own (see run-docker.sh), where the host's firewall rules do not apply.
 -module(mcp_bind).
 -export([main/0]).
 
 main() ->
     {ok, Ifs} = inet:getifaddrs(),
     [Eth | _] = [A || {_, Os} <- Ifs, {addr, A = {A1, _, _, _}} <- Os, A1 =/= 127],
-    io:format("environment~n  OTP ~s erts-~s~n  non-loopback IPv4: ~s~n  nft tables: ~s~n",
-              [erlang:system_info(otp_release), erlang:system_info(version), inet:ntoa(Eth),
-               string:trim(os:cmd("nft list tables 2>/dev/null | wc -l"))]),
+    io:format("environment~n  OTP ~s erts-~s~n  non-loopback IPv4: ~s~n",
+              [erlang:system_info(otp_release), erlang:system_info(version), inet:ntoa(Eth)]),
     Pre = [binary, {packet, line}, {active, false}, {reuseaddr, true}],
 
-    io:format("~n## 1. master: listen options as in tcp_server.ex:135 (no {ip,_})~n"),
+    io:format("~n## 1. master (68df44b6): listen options as in tcp_server.ex:135 (no {ip,_})~n"),
     {ok, L0} = gen_tcp:listen(0, Pre),
     {ok, {A0, P0}} = inet:sockname(L0),
     io:format("  -> bind ~s:~w~n", [inet:ntoa(A0), P0]),

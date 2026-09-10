@@ -1,15 +1,14 @@
 environment
   OTP 29 erts-17.0.6
   non-loopback IPv4: 172.17.0.2
-  nft tables: 0
 
-## 1. master: listen options as in tcp_server.ex:135 (no {ip,_})
-  -> bind 0.0.0.0:40943
+## 1. master (68df44b6): listen options as in tcp_server.ex:135 (no {ip,_})
+  -> bind 0.0.0.0:42935
   -> connect from non-loopback 172.17.0.2 -> ok
   -> connect ::1 (IPv6 loopback)  -> {error,econnrefused}   (0.0.0.0 is not a dual-stack bind)
 
 ## 2. fix: same options plus {ip, {127,0,0,1}}
-  -> bind 127.0.0.1:45847
+  -> bind 127.0.0.1:34439
   -> connect from non-loopback 172.17.0.2 -> {error,econnrefused}
   -> connect 127.0.0.1             -> ok
 

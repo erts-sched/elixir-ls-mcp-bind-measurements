@@ -23,19 +23,22 @@ Requirements: Docker. Nothing runs on the host.
 ```
 
 Each run starts an official `erlang:<version>` container on the default bridge
-network (its own network namespace, a non-loopback address `172.17.0.x`, zero
-nftables tables), compiles `mcp_bind.erl` and runs it. Sockets are read with
+network (its own network namespace, where the host's firewall rules do not
+apply, and a non-loopback address `172.17.0.x` to connect from), compiles
+`mcp_bind.erl` and runs it. Sockets are read with
 `inet:sockname/1` and reachability is measured with `gen_tcp:connect/4`, not
 with `ss`, `nc` or `ip`.
 
 ## Cases and results
 
 Identical on OTP 27.3.4.17 (erts 15.2.7.13), 28.5.0.6 (erts 16.4.0.6) and
-29.0.6 (erts 17.0.6). Outputs are in [`results/`](results/).
+29.0.6 (erts 17.0.6). The outputs print the major release and the erts
+version; the erts version identifies the patch release (`otp_versions.table`
+in the OTP repository). Outputs are in [`results/`](results/).
 
 | # | Setup | Result |
 |---|-------|--------|
-| 1 | `master`: the listen options of `tcp_server.ex:135`, no `{ip, _}` | bind `0.0.0.0:P`; connect from the non-loopback address: `ok`; connect `::1`: `econnrefused` |
+| 1 | `master` (68df44b6): the listen options of `tcp_server.ex:135`, no `{ip, _}` | bind `0.0.0.0:P`; connect from the non-loopback address: `ok`; connect `::1`: `econnrefused` |
 | 2 | the change: same options plus `{ip, {127,0,0,1}}` | bind `127.0.0.1:P`; connect from the non-loopback address: `econnrefused`; connect `127.0.0.1`: `ok` |
 | 3 | the bridge script's `gen_tcp:connect/4` by the name `localhost`, no family option, against the `127.0.0.1` listener | `inet_db:res_option(inet6)` = `false`; `localhost` resolves to `{127,0,0,1}`; connect: `ok` |
 
@@ -68,10 +71,16 @@ reproduced here, because they need the project compiled:
   `Supervisor.start_link/1` returns `{:ok, pid}` and the process count does not
   grow after stopping the server (no orphaned accept loop).
 
-## Not measured
+## Not measured, and why
 
-- Windows and macOS. Linux containers only. `:einval` as the accept error on a
-  closed listen socket on Windows is taken from OTP behaviour, not measured.
+- Windows and macOS. Linux containers only.
+- The accept error matched by the change (`reason in [:closed, :einval]`) is
+  not reproduced by `mcp_bind.erl`. `:closed` is what a pending
+  `gen_tcp:accept/1` gets when the listen socket is closed, and what
+  `inet_db:lookup_socket/1` returns once the port is gone; `:einval` is what
+  `prim_inet:ctl_cmd/3` returns when a fresh `accept` call lands while the port
+  is being torn down. Both are Linux behaviours of OTP; the clause is
+  defensive, not platform-specific.
 - A second physical host. The non-loopback address used is the container's own
   bridge address, which takes the same path a remote host would.
 
